@@ -1,0 +1,188 @@
+---
+title: "Manuscrito Machine Learning"
+author: "Duban Romero"
+date: "`r Sys.Date()`"
+output:
+  html_document: default
+  pdf_document: default
+editor_options: 
+  chunk_output_type: inline
+---
+
+# Recursos
+
+```{r, include=FALSE,echo=FALSE}
+library(readxl)
+library(tidyverse)
+library(knitr)
+library(patchwork)
+source("https://raw.githubusercontent.com/rduban/Rfunctions_DR/main/R%20functions.R")
+
+datos <- read.csv2("datosCalificados.csv"); datos<-datos[-1]
+
+etiq<-c('conducta', 'actitud', 'deseo','ImpulsoPropio','funcionSexual','extraversion',
+       'amabilidad','escrupulo','afect_nega','apertura','maquiavel','narcisis','psicopa',
+       'satisIndividual')
+
+demogra<-c('p3','p126','p141','p142','p143','p145')
+
+x<- rowSums(is.na(datos[etiq]))
+datos<-datos[x==0,]
+mu<-datos[datos$p142=="Femenino",c(demogra,etiq)]
+ho<-datos[datos$p142=="Masculino",c(demogra,etiq)]
+
+x<-data.frame(apply(mu[c('satisIndividual')],2,function(x){
+  z<-ifelse(x<=quantile(x,probs = .25),"Unsatisfied","Satisfied")
+  }))
+names(x)<-paste0(names(x),"_cat")
+
+mu<-cbind(mu,x)
+
+x<-data.frame(apply(ho[c('satisIndividual')],2,function(x){
+  ifelse(x<=quantile(x,probs = .25),"Unsatisfied","Satisfied")
+  }))
+names(x)<-paste0(names(x),"_cat")
+
+ho<-cbind(ho,x)
+
+x<-rbind(mu[c("p3","satisIndividual_cat")],ho[c("p3","satisIndividual_cat")])
+
+datos %>%
+  left_join(x,by="p3")->datos
+```
+
+```{r}
+colores<- c("#CC6600","#00CCCC","#CC0099","#00CC66","#0066CC",
+            "#F0E442","#FF9900","#9933CC","#66CC00","#FF3366",
+            "#00FFCC","#FF6600","#6600CC","#CCCC00","#CC3300")
+```
+
+## Comparaciones
+
+Mujeres
+
+```{r}
+x<-rbind(my_t.test(mu$conducta,mu$satisIndividual_cat,paired = F,var.equal = T),
+      my_t.test(mu$actitud,mu$satisIndividual_cat,paired = F,var.equal = T),
+      my_t.test(mu$deseo,mu$satisIndividual_cat,paired = F,var.equal = T),
+      my_t.test(mu$ImpulsoPropio,mu$satisIndividual_cat,paired = F,var.equal = T),
+      my_t.test(mu$funcionSexual,mu$satisIndividual_cat,paired = F,var.equal = T),
+      my_t.test(mu$extraversion,mu$satisIndividual_cat,paired = F,var.equal = T),
+      my_t.test(mu$amabilidad,mu$satisIndividual_cat,paired = F,var.equal = T),
+      my_t.test(mu$escrupulo,mu$satisIndividual_cat,paired = F,var.equal = T),
+      my_t.test(mu$afect_nega,mu$satisIndividual_cat,paired = F,var.equal = T),
+      my_t.test(mu$apertura,mu$satisIndividual_cat,paired = F,var.equal = T),
+      my_t.test(mu$maquiavel,mu$satisIndividual_cat,paired = F,var.equal = T),
+      my_t.test(mu$narcisis,mu$satisIndividual_cat,paired = F,var.equal = T),
+      my_t.test(mu$psicopa,mu$satisIndividual_cat,paired = F,var.equal = T))
+x
+```
+
+Hombres
+
+```{r}
+x<-rbind(my_t.test(ho$conducta,ho$satisIndividual_cat,paired = F,var.equal = T),
+         my_t.test(ho$actitud,ho$satisIndividual_cat,paired = F,var.equal = T),
+         my_t.test(ho$deseo,ho$satisIndividual_cat,paired = F,var.equal = T),
+         my_t.test(ho$ImpulsoPropio,ho$satisIndividual_cat,paired = F,var.equal = T),
+         my_t.test(ho$funcionSexual,ho$satisIndividual_cat,paired = F,var.equal = T),
+         my_t.test(ho$extraversion,ho$satisIndividual_cat,paired = F,var.equal = T),
+         my_t.test(ho$amabilidad,ho$satisIndividual_cat,paired = F,var.equal = T),
+         my_t.test(ho$escrupulo,ho$satisIndividual_cat,paired = F,var.equal = T),
+         my_t.test(ho$afect_nega,ho$satisIndividual_cat,paired = F,var.equal = T),
+         my_t.test(ho$apertura,ho$satisIndividual_cat,paired = F,var.equal = T),
+         my_t.test(ho$maquiavel,ho$satisIndividual_cat,paired = F,var.equal = T),
+         my_t.test(ho$narcisis,ho$satisIndividual_cat,paired = F,var.equal = T),
+         my_t.test(ho$psicopa,ho$satisIndividual_cat,paired = F,var.equal = T))
+x
+
+```
+
+```{r}
+datos$status1<-ifelse(datos$p126==1,1,0) #casado
+datos$status2<-ifelse(datos$p126==2,1,0) #relación amorosa
+datos$status3<-ifelse(datos$p126==3,1,0) # soltero acabo la relación
+datos$status4<-ifelse(datos$p126==4,1,0) # soltero involuntario
+datos$status5<-ifelse(datos$p126==5,1,0) # soltero voluntario
+
+a<-datos[datos$p142=="Femenino",]
+b<-datos[datos$p142=="Masculino",]
+
+```
+
+
+```{r}
+# chi-cuadrado y OR
+## Mujeres
+x<-table(a$status1,a$satisIndividual_cat)
+chisq.test(x); paste("OR",round((x[1,1]*x[2,2])/(x[2,1]*x[1,2]),3))
+x<-table(a$status2,a$satisIndividual_cat);
+chisq.test(x); paste("OR",round((x[1,1]*x[2,2])/(x[2,1]*x[1,2]),3))
+x<-table(a$status3,a$satisIndividual_cat); 
+chisq.test(x); paste("OR",round((x[1,1]*x[2,2])/(x[2,1]*x[1,2]),3))
+x<-table(a$status4,a$satisIndividual_cat)
+chisq.test(x); paste("OR",round((x[1,1]*x[2,2])/(x[2,1]*x[1,2]),3))
+x<-table(a$status5,a$satisIndividual_cat)
+chisq.test(x); paste("OR",round((x[1,1]*x[2,2])/(x[2,1]*x[1,2]),3))
+```
+
+```{r}
+# chi-cuadrado y OR
+## hombres
+x<-table(b$status1,b$satisIndividual_cat)
+chisq.test(x); paste("OR",round((x[1,1]*x[2,2])/(x[2,1]*x[1,2]),3))
+x<-table(b$status2,b$satisIndividual_cat);
+chisq.test(x); paste("OR",round((x[1,1]*x[2,2])/(x[2,1]*x[1,2]),3))
+x<-table(b$status3,b$satisIndividual_cat); 
+chisq.test(x); paste("OR",round((x[1,1]*x[2,2])/(x[2,1]*x[1,2]),3))
+x<-table(b$status4,b$satisIndividual_cat)
+chisq.test(x); paste("OR",round((x[1,1]*x[2,2])/(x[2,1]*x[1,2]),3))
+x<-table(b$status5,b$satisIndividual_cat)
+chisq.test(x); paste("OR",round((x[1,1]*x[2,2])/(x[2,1]*x[1,2]),3))
+
+```
+
+
+```{r}
+datos$p142<- factor(datos$p142,levels = c("Femenino","Masculino"),labels = c("Female","Male"))
+```
+
+
+```{r}
+x1<-datos %>%
+  ggplot(aes(x=p142,y=ImpulsoPropio,fill=satisIndividual_cat))+
+  geom_boxplot()+
+  labs(x="",y="Sexual drive")+
+  scale_fill_manual("",values = colores)+
+  theme(legend.position = "none",
+        axis.text = element_text(face="bold"),
+        panel.background = element_rect(fill = "white"),
+        panel.grid = element_line(color="#EEE9E9"))
+
+x2<-datos %>%
+  ggplot(aes(x=p142,y=funcionSexual,fill=satisIndividual_cat))+
+  geom_boxplot()+
+  labs(x="",y="Sexual functioning")+
+  scale_fill_manual("",values = colores)+
+  theme(legend.position = "none",
+        axis.text = element_text(face="bold"),
+        panel.background = element_rect(fill = "white"),
+        panel.grid = element_line(color="#EEE9E9"))
+
+x3<-datos %>%
+  ggplot(aes(x=p142,y=extraversion,fill=satisIndividual_cat))+
+  geom_boxplot()+
+  labs(x="",y="Extraversion")+
+  scale_fill_manual("",values = colores)+
+  theme(legend.position = "bottom",
+        axis.text = element_text(face="bold"),
+        panel.background = element_rect(fill = "white"),
+        panel.grid = element_line(color="#EEE9E9"))
+
+```
+
+
+```{r,fig.height=12,fig.width=4}
+x1/x2/x3
+```
+
